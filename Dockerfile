@@ -8,6 +8,7 @@ FROM node:20-bookworm-slim AS builder
 # All system libraries needed by native modules
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        git \
         python3 \
         python3-pip \
         pkg-config \
