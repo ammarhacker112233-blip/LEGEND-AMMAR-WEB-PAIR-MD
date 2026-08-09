@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=builder /app .
-
+# Ensure pm2 is present at runtime (start script depends on it)
+RUN npm ls pm2 >/dev/null 2>&1 || npm install --omit=dev pm2
 EXPOSE 3000
 CMD ["npm", "start"]
