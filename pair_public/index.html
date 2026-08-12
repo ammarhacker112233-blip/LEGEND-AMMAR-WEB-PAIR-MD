@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🕷️ LEGEND-AMMAR — Pairing Code</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕷️</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #06060d;
+        --cyan: #22d3ee;
+        --magenta: #e879f9;
+        --text: #e6e6f0;
+        --muted: #9ca3af;
+        --card: #0c0c17;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        font-family: "Inter", sans-serif;
+        background:
+          radial-gradient(ellipse 80% 50% at 20% 0%, rgba(34, 211, 238, 0.12), transparent 60%),
+          radial-gradient(ellipse 80% 50% at 80% 100%, rgba(232, 121, 249, 0.12), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .neon-cyan { color: var(--cyan); text-shadow: 0 0 12px rgba(34, 211, 238, 0.6); }
+      .neon-magenta { color: var(--magenta); text-shadow: 0 0 12px rgba(232, 121, 249, 0.6); }
+      .container { max-width: 34rem; width: 100%; margin: 0 auto; padding: 2rem 1rem; flex: 1; display: flex; flex-direction: column; }
+      header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border); background: rgba(6, 6, 13, 0.7); backdrop-filter: blur(12px); }
+      .brand { font-family: "Orbitron", sans-serif; font-weight: 900; font-size: 1.1rem; }
+      .social { font-size: 0.75rem; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 0.3rem; }
+      .social:hover { color: var(--cyan); }
+      .hero { text-align: center; margin: 2rem 0; }
+      .hero img { width: 6.5rem; height: 6.5rem; border-radius: 9999px; border: 2px solid var(--cyan); box-shadow: 0 0 24px rgba(34, 211, 238, 0.4); object-fit: cover; }
+      .hero h1 { font-family: "Orbitron", sans-serif; font-weight: 900; font-size: 2rem; margin-top: 1rem; }
+      .hero p { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+      .card { border: 1px solid rgba(34, 211, 238, 0.3); box-shadow: 0 0 20px rgba(34, 211, 238, 0.15); background: var(--card); border-radius: 1rem; padding: 1.5rem; }
+      .card h2 { font-family: "Orbitron", sans-serif; font-weight: 700; color: var(--cyan); text-align: center; margin-bottom: 1.2rem; font-size: 1.05rem; }
+      label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; }
+      input[type="tel"] {
+        width: 100%; padding: 0.75rem 1rem; border-radius: 0.6rem;
+        border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
+        color: var(--text); font-size: 1.05rem; font-family: monospace;
+      }
+      input:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+      .hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
+      .btn {
+        width: 100%; margin-top: 1rem; padding: 0.8rem; border-radius: 0.6rem; border: none;
+        background: linear-gradient(90deg, var(--cyan), var(--magenta)); color: #06060d;
+        font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+        transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.16s;
+      }
+      .btn:hover { opacity: 0.9; }
+      .btn:active { transform: scale(0.97); }
+      .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      .msg { margin-top: 1rem; font-size: 0.85rem; padding: 0.75rem; border-radius: 0.6rem; }
+      .msg.error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; }
+      .msg.info { background: rgba(232, 121, 249, 0.08); border: 1px solid rgba(232, 121, 249, 0.4); color: var(--magenta); }
+      .code-box { margin-top: 1.2rem; text-align: center; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(34, 211, 238, 0.6); box-shadow: 0 0 28px rgba(34, 211, 238, 0.25); }
+      .code { font-family: monospace; font-size: 2rem; font-weight: 700; letter-spacing: 0.3em; }
+      .copy-btn { margin-top: 1rem; padding: 0.5rem 1.2rem; border-radius: 0.5rem; border: 1px solid rgba(34, 211, 238, 0.5); background: transparent; color: var(--cyan); cursor: pointer; font-weight: 600; }
+      .copy-btn:hover { background: rgba(34, 211, 238, 0.1); }
+      .steps { margin-top: 2rem; }
+      .steps h2 { font-family: "Orbitron", sans-serif; font-weight: 700; color: var(--magenta); text-align: center; margin-bottom: 1.2rem; }
+      .step { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+      .step .num { flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 9999px; border: 1px solid rgba(232, 121, 249, 0.5); background: rgba(232, 121, 249, 0.1); display: flex; align-items: center; justify-content: center; font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 0.8rem; color: var(--magenta); }
+      .step p { font-size: 0.9rem; }
+      .step .t { font-weight: 700; }
+      .step .d { color: var(--muted); font-size: 0.8rem; }
+      footer { text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); }
+      .hidden { display: none; }
+      .spinner { display: inline-block; width: 1rem; height: 1rem; border: 2px solid rgba(6,6,13,0.3); border-top-color: #06060d; border-radius: 9999px; animation: spin 0.7s linear infinite; vertical-align: -0.15rem; margin-right: 0.5rem; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="brand neon-cyan">🕷️ LEGEND-AMMAR</span>
+      <a class="social" href="https://ammarrebel.blogspot.com" target="_blank" rel="noopener noreferrer">🌐 Website</a>
+    </header>
+
+    <div class="container">
+      <div class="hero">
+        <img src="https://i.postimg.cc/mrfjmHKd/IMG-20260726-WA0000.jpg" alt="LEGEND-AMMAR Bot" onerror="this.style.display='none'" />
+        <h1 class="neon-cyan">🕷️ LEGEND-AMMAR 🕷️</h1>
+        <p>WhatsApp Pairing Code — apna bot abhi link karein</p>
+      </div>
+
+      <div class="card">
+        <h2>Pairing Code Get Karein</h2>
+        <form id="pairForm">
+          <label for="phone">WhatsApp Number</label>
+          <input id="phone" type="tel" inputmode="tel" placeholder="+93770909827" autocomplete="off" />
+          <p class="hint">Country code zaroor daalein (jaise +93, +92, +1 …)</p>
+          <button class="btn" type="submit" id="submitBtn">GET PAIRING CODE 🕷️</button>
+        </form>
+
+        <div id="errorMsg" class="msg error hidden"></div>
+        <div id="infoMsg" class="msg info hidden"></div>
+
+        <div id="codeResult" class="hidden">
+          <p style="text-align:center; font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem">
+            Ye 8-digit code WhatsApp me enter karein
+          </p>
+          <div class="code-box">
+            <p class="code neon-cyan" id="codeText"></p>
+            <button class="copy-btn" id="copyBtn">📋 Copy Code</button>
+          </div>
+          <p style="text-align:center; font-size:0.75rem; color:var(--muted); margin-top:0.75rem">
+            Code 5 minute ke andar use kar lein, warna naya request karein.
+          </p>
+        </div>
+      </div>
+
+      <div class="steps">
+        <h2>Link Kaise Karein?</h2>
+        <div class="step"><div class="num">1</div><div><p class="t">📱 WhatsApp kholo</p><p class="d">Apne phone par WhatsApp open karein.</p></div></div>
+        <div class="step"><div class="num">2</div><div><p class="t">🔗 Linked Devices</p><p class="d">Settings ya menu me ja kar 'Linked Devices' par tap karein.</p></div></div>
+        <div class="step"><div class="num">3</div><div><p class="t">🪝 Link with phone number</p><p class="d">'Link with phone number' par tap karein (QR ki jagah).</p></div></div>
+        <div class="step"><div class="num">4</div><div><p class="t">📋 Code enter karo</p><p class="d">Ye 8-digit code enter karein aur bot connect ho jayega.</p></div></div>
+        <p class="hint" style="margin-top:0.5rem">Yaad rakhein: WhatsApp → Linked Devices → <strong style="color:var(--magenta)">Link with phone number</strong></p>
+      </div>
+    </div>
+
+    <footer>
+      <span class="neon-cyan" style="font-family:Orbitron;font-weight:900">🕷️ LEGEND-AMMAR</span> — Powered by Legend Ammar
+    </footer>
+
+    <script>
+      const form = document.getElementById("pairForm");
+      const phoneInput = document.getElementById("phone");
+      const submitBtn = document.getElementById("submitBtn");
+      const errorMsg = document.getElementById("errorMsg");
+      const infoMsg = document.getElementById("infoMsg");
+      const codeResult = document.getElementById("codeResult");
+      const codeText = document.getElementById("codeText");
+      const copyBtn = document.getElementById("copyBtn");
+
+      function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.classList.remove("hidden");
+        codeResult.classList.add("hidden");
+        infoMsg.classList.add("hidden");
+      }
+      function showInfo(msg) {
+        infoMsg.textContent = msg;
+        infoMsg.classList.remove("hidden");
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorMsg.classList.add("hidden");
+        codeResult.classList.add("hidden");
+        const raw = phoneInput.value.trim();
+        if (!raw) { showError("Apna WhatsApp number enter karein"); return; }
+        const digits = raw.replace(/[\s()-]/g, "").replace(/^\+/, "");
+        if (!/^\d{10,15}$/.test(digits)) { showError("Galat number — country code ke sath likhein, jaise +93770909827"); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Code ban raha hai…';
+
+        try {
+          const res = await fetch("/api/pair", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phoneNumber: raw }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.code) {
+            showError(data.error || "Kuch galat ho gaya, dobara try karein.");
+          } else {
+            const code = data.code;
+            codeText.textContent = code.slice(0, 4) + "-" + code.slice(4);
+            codeResult.classList.remove("hidden");
+            showInfo("Code copy kar ke WhatsApp → Linked Devices → Link with phone number me enter karein.");
+          }
+        } catch {
+          showError("Server se connect nahi ho saka, internet check karein aur dobara try karein.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "GET PAIRING CODE 🕷️";
+        }
+      });
+
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(codeText.textContent.replace("-", ""));
+          copyBtn.textContent = "✅ Copied!";
+          setTimeout(() => (copyBtn.textContent = "📋 Copy Code"), 2000);
+        } catch {
+          alert("Code: " + codeText.textContent.replace("-", ""));
+        }
+      });
+    </script>
+  </body>
+</html>

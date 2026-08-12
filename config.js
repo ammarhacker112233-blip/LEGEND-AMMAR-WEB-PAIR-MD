@@ -6,7 +6,7 @@ const fs = require('fs'),
 
 //add your session id
 
-global.session = "https://legend-ammar-pair-server-production.up.railway.app"; 
+global.session = "https://legendammar-pair.manus.space"; 
  
  
 module.exports = {
