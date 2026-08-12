@@ -25,6 +25,9 @@ const {
 // proxy returns 502.
 const PORT = Number(process.env.PAIR_PORT || process.env.PORT || 8000);
 const AUTH_DIR = path.join(__dirname, ".pair-auth");
+// Bot ke liye SESSION_ID file (IK~ format) — TOP par const taake hoisting
+// issue na aaye jab restore ke dauran exportSessionIdForBot bulaya jaye.
+const SESSION_ID_FILE = path.join(__dirname, "SESSION_ID.txt");
 
 // ---------- Logger (terminal + pair.log) ----------
 function plog(...args) {
@@ -58,12 +61,14 @@ function rehydrateStoredCreds() {
     if (phone) {
       credsByNumber.set(phone, { creds: raw, restored: true });
       plog("✅ Stored session restored from disk for", phone);
+      exportSessionIdForBot(raw);
     } else {
       // Number anjaan hai — phir bhi pehle available number par rakho taake
       // bot us ko utha sake; /session khali id par bhi serve karta hai.
       const any = credsByNumber.keys().next().value;
       credsByNumber.set(any || "_any", { creds: raw, restored: true });
       plog("⚠️ Stored session restored (number unknown), serving on any id");
+      exportSessionIdForBot(raw);
     }
   } catch (e) {
     plog("⚠️ Could not rehydrate stored creds:", e?.message || e);
@@ -71,6 +76,26 @@ function rehydrateStoredCreds() {
 }
 rehydrateStoredCreds();
 
+// ---------- SESSION_ID export (IK~ format for the bot) ----------
+// Bot ka index.js SESSION_ID env variable maangta hai, format:
+//   IK~base64(gzip(creds.json))
+// Jab bhi session capture ya restore ho, yeh file likh do — start.sh ise
+// bot ko env me de dega. Bot ko /session fetch karne ki zaroorat nahi.
+// (SESSION_ID_FILE const ab file ke top par defined hai.)
+function exportSessionIdForBot(creds) {
+  try {
+    const zlib = require("zlib");
+    const payload = zlib
+      .gzipSync(JSON.stringify(creds))
+      .toString("base64");
+    fs.writeFileSync(SESSION_ID_FILE, `IK~${payload}`);
+    plog("✅ SESSION_ID.txt exported (IK~ format,", payload.length, "chars)");
+  } catch (e) {
+    plog("⚠️ Could not export SESSION_ID.txt:", e?.message || e);
+  }
+}
+if (credsByNumber.size) exportSessionIdForBot([...credsByNumber.values()][0].creds);
+// NOTE: /sessionid handler registered with app below (after `const app`).
 // ---------- Live pairing sockets: number → {sock, until, timer} ----------
 const pendingByNumber = (global.__pendingByNumber =
   global.__pendingByNumber || new Map());
@@ -217,6 +242,9 @@ function attemptPairing(phoneNumber, attempt = 0) {
             // Pairing complete — socket ka kaam ho gaya, band karo.
             endPending(phoneNumber, "pairing complete");
           }
+          // Har creds update par IK~ format me SESSION_ID file export —
+          // bot usi file se session uthata hai (fresh creds, partial bhi).
+          exportSessionIdForBot(credsByNumber.get(phoneNumber).creds);
         });
 
         const hardTimeout = setTimeout(() => {
@@ -423,6 +451,16 @@ app.get(["/session", "/session.json", "/api/session"], (req, res) => {
       : null,
     error: creds ? null : "No session yet. Pehle pairing code se pair karein.",
   });
+});
+
+// Session-ID endpoint (IK~ format) — start.sh ise bot ke env me deta hai.
+app.get("/sessionid", (_req, res) => {
+  try {
+    const txt = fs.readFileSync(SESSION_ID_FILE, "utf8").trim();
+    res.json({ status: true, data: { sessionId: txt } });
+  } catch {
+    res.json({ status: false, data: null, error: "No session yet. Pehle pairing code se pair karein." });
+  }
 });
 
 // Fallback: serve the pairing page
