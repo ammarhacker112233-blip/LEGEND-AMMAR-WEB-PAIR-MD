@@ -8,7 +8,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name LEGEND-AMMAR",
+    "start": "pm2 start ecosystem.config.js",
     "stop": "pm2 stop LEGEND-AMMAR",
     "restart": "pm2 restart LEGEND-AMMAR"
   },
@@ -31,7 +31,7 @@
     "dotenv": "^16.3.1",
     "cors": "latest",
     "body-parser": "latest",
-    "jimp":"latest",
+    "jimp": "latest",
     "translatte": "^3.0.1",
     "express": "^4.19.2",
     "ffmpeg": "0.0.4",
@@ -40,8 +40,8 @@
     "form-data": "^4.0.1",
     "fs": "^0.0.1-security",
     "fs-extra": "^11.1.0",
-    "sharp":"0.32.6", 
-    "@whiskeysockets/baileys":"7.0.0-rc.9",
+    "sharp": "0.32.6",
+    "@whiskeysockets/baileys": "7.0.0-rc.9",
     "gifted-dls": "*",
     "git": "0.1.5",
     "isolated-vm": "^5.0.3",
