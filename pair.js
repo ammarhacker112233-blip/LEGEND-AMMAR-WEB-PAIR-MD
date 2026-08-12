@@ -523,6 +523,50 @@ app.get(["/session", "/session.json", "/api/session"], (req, res) => {
   });
 });
 
+// ---------- Session ingest: backup portal (jawadtech.vercel.app) ya kisi aur
+// source se mila base64 session seedha bot ke liye likho ----------
+// Accepted formats (body: {session: "..."} POST, ya ?session= GET):
+//   1. IK~base64(gzip(creds.json))        — humara apna format
+//   2. LEGEND-AMMAR:~base64(creds.json)   — JAWAD-family canonical
+//   3. plain base64(creds.json)           — raw creds
+// Bot ka index.js creds ko `session/creds.json` me rakhta hai — yahan seedha
+// wohi file likho taake next start par bot isi session se chalay.
+app.post("/api/ingest", (req, res) => {
+  const raw = String(req.body?.session || "").trim();
+  try {
+    const zlib = require("zlib");
+    let creds = null;
+    if (raw.startsWith("IK~")) {
+      creds = JSON.parse(zlib.gunzipSync(Buffer.from(raw.slice(3), "base64")).toString());
+    } else {
+      const payload = raw.includes(":~") ? raw.split(":~")[1] : raw;
+      creds = JSON.parse(Buffer.from(payload, "base64").toString());
+    }
+    if (!creds?.me?.id || !creds?.noiseKey || !creds?.identityKey) {
+      throw new Error("creds.json incomplete (me/noiseKey/identityKey missing)");
+    }
+    const sessionDir = path.join(__dirname, "session");
+    fs.mkdirSync(sessionDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionDir, "creds.json"),
+      JSON.stringify(creds, null, 2)
+    );
+    // Bot ke liye IK~ file bhi — pair.js restart / next deploy par use hogi.
+    exportSessionIdForBot(creds);
+    plog("✅ Session ingested for", creds.me.id);
+    res.json({
+      status: true,
+      data: { number: String(creds.me.id).split(":")[0] },
+    });
+  } catch (e) {
+    plog("❌ Ingest failed:", e?.message || e);
+    res.status(400).json({
+      status: false,
+      error: "Session format sahi nahi — base64(creds.json) ya IK~... paste karein.",
+    });
+  }
+});
+
 // Session-ID endpoint (IK~ format) — start.sh ise bot ke env me deta hai.
 app.get("/sessionid", (_req, res) => {
   try {

@@ -1,0 +1,7 @@
+
+# Bot session creds (sensitive — never push)
+session/
+.pair-auth/
+.pair-auth-backup/
+SESSION_ID.txt
+*.log
