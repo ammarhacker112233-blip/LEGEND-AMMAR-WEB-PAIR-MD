@@ -562,8 +562,13 @@ app.post("/api/ingest", (req, res) => {
       const payload = raw.includes(":~") ? raw.split(":~")[1] : raw;
       creds = JSON.parse(Buffer.from(payload, "base64").toString());
     }
-    if (!creds?.me?.id || !creds?.noiseKey || !creds?.identityKey) {
-      throw new Error("creds.json incomplete (me/noiseKey/identityKey missing)");
+    // Completeness: Baileys-native creds.json (JAWAD-MD format) rakhta hai
+    // identityKey top-level ya signalIdentities[0].identityKey me.
+    const hasIdentity =
+      !!creds?.identityKey ||
+      Array.isArray(creds?.signalIdentities) && creds.signalIdentities.length > 0;
+    if (!creds?.me?.id || !creds?.noiseKey || !hasIdentity) {
+      throw new Error("creds.json incomplete (me/noiseKey/identity missing)");
     }
     const sessionDir = path.join(__dirname, "session");
     fs.mkdirSync(sessionDir, { recursive: true });
