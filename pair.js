@@ -58,11 +58,23 @@ function getAuthState() {
 
 // Fingerprints proven against WhatsApp 405 on hosted servers
 const BROWSER_VARIANTS = [
-  ["Ubuntu", "Chrome", "20.0.04"],
   ["Chrome", "Windows", "110.0.5481.177"],
+  ["Ubuntu", "Chrome", "20.0.04"],
 ];
 
-function attemptPairing(phoneNumber) {
+// Proven 405 fix version (Baileys issue #2370) — also try latest fetched version
+const PINNED_VERSION = [2, 3000, 1033893291];
+let fetchedVersion = null;
+(async () => {
+  try {
+    fetchedVersion = await require("@whiskeysockets/baileys").fetchLatestBaileysVersion();
+    plog("Fetched latest WA version:", fetchedVersion?.version || fetchedVersion);
+  } catch (e) {
+    plog("WARN: could not fetch latest WA version, using pinned", e?.message || e);
+  }
+})();
+
+function attemptPairing(phoneNumber, attempt = 0) {
   return new Promise((resolve) => {
     let resolved = false;
     const finish = (r) => {
@@ -74,6 +86,11 @@ function attemptPairing(phoneNumber) {
     let sock;
     getAuthState()
       .then(({ state, saveCreds }) => {
+        // Rotate browser fingerprint per attempt (405/428 fix on hosted IPs)
+        const browser = BROWSER_VARIANTS[attempt % BROWSER_VARIANTS.length];
+        // Prefer latest fetched WA version; fall back to pinned 405-fix version
+        const version = fetchedVersion || PINNED_VERSION;
+        plog("Attempt", attempt + 1, "browser:", browser.join(" "), "version:", JSON.stringify(version));
         sock = makeWASocket({
           auth: {
             creds: state.creds,
@@ -81,9 +98,15 @@ function attemptPairing(phoneNumber) {
           },
           printQRInTerminal: false,
           logger: noopLogger,
-          browser: BROWSER_VARIANTS[0],
-          version: [2, 3000, 1033893291],
-          connectTimeoutMs: 25000,
+          browser,
+          version,
+          connectTimeoutMs: 60000,
+          defaultQueryTimeoutMs: undefined,
+          keepAliveIntervalMs: 30000,
+          qrTimeout: undefined,
+          markOnlineOnConnect: false,
+          syncFullHistory: false,
+          getMessage: async () => undefined,
         });
 
         const entry = credsByNumber.get(phoneNumber) || { creds: {} };
@@ -178,12 +201,17 @@ function attemptPairing(phoneNumber) {
 }
 
 async function requestPairCode(phoneNumber) {
+  // Per-attempt backoff: rapid reconnects on the same IP trigger WhatsApp
+  // 429/405 rate limits that persist 15-40 min — space attempts out.
+  const BACKOFF_MS = [3000, 10000];
   const MAX_ATTEMPTS = 3;
   for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
-    const result = await attemptPairing(phoneNumber);
+    const result = await attemptPairing(phoneNumber, i);
     if (result.valid) return result.code;
     if (i < MAX_ATTEMPTS - 1) {
-      await new Promise((r) => setTimeout(r, 3000));
+      const waitMs = BACKOFF_MS[i] || 10000;
+      plog(`Attempt ${i + 1} failed, waiting ${waitMs / 1000}s before retry...`);
+      await new Promise((r) => setTimeout(r, waitMs));
     }
   }
   throw new Error(
