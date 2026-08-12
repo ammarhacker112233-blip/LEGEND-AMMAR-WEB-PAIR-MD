@@ -61,17 +61,32 @@ function rehydrateStoredCreds() {
     if (phone) {
       credsByNumber.set(phone, { creds: raw, restored: true });
       plog("✅ Stored session restored from disk for", phone);
-      exportSessionIdForBot(raw);
     } else {
       // Number anjaan hai — phir bhi pehle available number par rakho taake
       // bot us ko utha sake; /session khali id par bhi serve karta hai.
       const any = credsByNumber.keys().next().value;
       credsByNumber.set(any || "_any", { creds: raw, restored: true });
       plog("⚠️ Stored session restored (number unknown), serving on any id");
-      exportSessionIdForBot(raw);
     }
   } catch (e) {
     plog("⚠️ Could not rehydrate stored creds:", e?.message || e);
+  }
+  // Bot ko sirf COMPLETE session do — adhuri creds se connection fail hota hai.
+  // Main creds incomplete hon to backup (.pair-auth-backup) check karo.
+  const cur = credsByNumber.size ? [...credsByNumber.values()][0]?.creds : null;
+  if (sessionIsComplete(cur)) {
+    exportSessionIdForBot(cur);
+  } else {
+    try {
+      const bak = path.join(__dirname, ".pair-auth-backup", "creds.json");
+      if (fs.existsSync(bak)) {
+        const raw = JSON.parse(fs.readFileSync(bak, "utf8"));
+        if (sessionIsComplete(raw)) {
+          plog("✅ Complete session restored from backup for bot");
+          exportSessionIdForBot(raw);
+        }
+      }
+    } catch { /* ignore */ }
   }
 }
 rehydrateStoredCreds();
@@ -146,14 +161,20 @@ let fetchedVersion = null;
  * tab session complete maani jati hai aur socket band kar dete hain (taake
  * baad me bot usi session ko safely connect kar sake).
  */
+// Session "complete" = identity + account info dono aa gaye — tabhi WhatsApp
+// connection ke qabil hoti hai. Adhuri creds (sirf noiseKey waghaira) se bot
+// connect NAHI ho sakta — is liye bot ko sirf complete session denge.
+function sessionIsComplete(creds) {
+  return !!(
+    creds && creds.identityKey && creds.account && creds.registrationId !== undefined
+  );
+}
 function captureCreds(phoneNumber, updatedCreds) {
   if (!updatedCreds || typeof updatedCreds !== "object") return false;
   const entry = credsByNumber.get(phoneNumber) || { creds: {} };
   Object.assign(entry.creds, updatedCreds);
   credsByNumber.set(phoneNumber, entry);
-  const complete = !!(
-    updatedCreds.identityKey && updatedCreds.registrationId !== undefined
-  );
+  const complete = sessionIsComplete(entry.creds);
   if (complete) {
     plog("✅ Session COMPLETE for", phoneNumber, "— socket band, bot le jayega.");
   }
@@ -193,13 +214,21 @@ function attemptPairing(phoneNumber, attempt = 0) {
           // Stored session ka backup pehle le lo — naya attempt purani
           // session ko nahi bhoolna chahiye (session complete hone se pehle
           // koi nayi pairing ka attempt aaye to backup se restore hoga).
+          // Sirf COMPLETE session ko backup karo — partial creds kabhi bhi
+          // achhi session ko override na kare.
           const credsFile = path.join(AUTH_DIR, "creds.json");
           if (fs.existsSync(credsFile)) {
-            fs.mkdirSync(path.join(__dirname, ".pair-auth-backup"), { recursive: true });
-            fs.copyFileSync(
-              credsFile,
-              path.join(__dirname, ".pair-auth-backup", "creds.json")
-            );
+            try {
+              const existing = JSON.parse(fs.readFileSync(credsFile, "utf8"));
+              if (sessionIsComplete(existing)) {
+                fs.mkdirSync(path.join(__dirname, ".pair-auth-backup"), { recursive: true });
+                fs.copyFileSync(
+                  credsFile,
+                  path.join(__dirname, ".pair-auth-backup", "creds.json")
+                );
+                plog("✅ Good session backed up before wipe");
+              }
+            } catch { /* ignore */ }
           }
           fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -242,9 +271,10 @@ function attemptPairing(phoneNumber, attempt = 0) {
             // Pairing complete — socket ka kaam ho gaya, band karo.
             endPending(phoneNumber, "pairing complete");
           }
-          // Har creds update par IK~ format me SESSION_ID file export —
-          // bot usi file se session uthata hai (fresh creds, partial bhi).
-          exportSessionIdForBot(credsByNumber.get(phoneNumber).creds);
+          // Sirf COMPLETE session bot ko do — partial creds se bot connect
+          // nahi ho sakta (WhatsApp identity reject kar deta hai).
+          const cur = credsByNumber.get(phoneNumber)?.creds;
+          if (sessionIsComplete(cur)) exportSessionIdForBot(cur);
         });
 
         const hardTimeout = setTimeout(() => {
