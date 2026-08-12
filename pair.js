@@ -57,7 +57,9 @@ function getAuthState() {
 }
 
 // Fingerprints proven against WhatsApp 405 on hosted servers
+// Baileys issue #2370 confirmed "Mac OS" platform also resolves 405.
 const BROWSER_VARIANTS = [
+  ["Mac OS", "Desktop", "110.0.5481.177"],
   ["Chrome", "Windows", "110.0.5481.177"],
   ["Ubuntu", "Chrome", "20.0.04"],
 ];
@@ -85,7 +87,16 @@ function attemptPairing(phoneNumber, attempt = 0) {
 
     let sock;
     getAuthState()
-      .then(({ state, saveCreds }) => {
+      .then(async ({ state, saveCreds }) => {
+        // Wipe the persisted auth dir before every pairing attempt so each
+        // attempt starts with a clean identity — stale creds are a known
+        // trigger for 405/loggedOut on WhatsApp's side.
+        try {
+          fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+          fs.mkdirSync(AUTH_DIR, { recursive: true });
+        } catch {
+          /* ignore */
+        }
         // Rotate browser fingerprint per attempt (405/428 fix on hosted IPs)
         const browser = BROWSER_VARIANTS[attempt % BROWSER_VARIANTS.length];
         // Prefer latest fetched WA version; fall back to pinned 405-fix version
