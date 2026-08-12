@@ -138,10 +138,15 @@ function getAuthState() {
 // Fingerprints proven against WhatsApp 405 on hosted servers
 // Baileys issue #2370 confirmed "Mac OS" platform also resolves 405.
 const BROWSER_VARIANTS = [
-  ["Mac OS", "Desktop", "110.0.5481.177"],
-  ["Chrome", "Windows", "110.0.5481.177"],
+  // Ubuntu Chrome pehle — datacenter IPs par 428 (link reject) sab se kam
+  // milta hai; Mac Desktop par WhatsApp zyada reject karta hai.
   ["Ubuntu", "Chrome", "20.0.04"],
+  ["Chrome", "Windows", "110.0.5481.177"],
+  ["Mac OS", "Desktop", "110.0.5481.177"],
 ];
+// Per-phone concurrency: agar ek number ka socket abhi zinda hai to naya
+// request mana karo — baar baar dabane se WhatsApp 428 deta hai.
+const lastPairAt = new Map();
 
 // Proven 405 fix version (Baileys issue #2370) — also try latest fetched version
 const PINNED_VERSION = [2, 3000, 1033893291];
@@ -235,8 +240,10 @@ function attemptPairing(phoneNumber, attempt = 0) {
         } catch {
           /* ignore */
         }
-        // Rotate browser fingerprint per attempt (405/428 fix on hosted IPs)
-        const browser = BROWSER_VARIANTS[attempt % BROWSER_VARIANTS.length];
+        // Rotate browser fingerprint per attempt (405/428 fix on hosted IPs):
+        // attempt 1 = Ubuntu Chrome (sab se zyada reliable), attempt 2 =
+        // Chrome Windows. Mac Desktop bilkul use nahi hota.
+        const browser = BROWSER_VARIANTS[Math.min(attempt, 1)];
         // Prefer latest fetched WA version; fall back to pinned 405-fix version
         const version = fetchedVersion || PINNED_VERSION;
         plog("Attempt", attempt + 1, "browser:", browser.join(" "), "version:", JSON.stringify(version));
@@ -392,6 +399,19 @@ async function requestPairCode(phoneNumber) {
   }
   // Per-attempt backoff: rapid reconnects on the same IP trigger WhatsApp
   // 429/405 rate limits — space attempts out (longer = safer).
+  // Per-phone concurrency guard: ek number ke liye sirf ek live pairing
+  // ho sakti hai. Doosra dabane wala foran message paayega — baar baar
+  // dabane se WhatsApp 428 deta hai aur purana code bhi expire kar deta hai.
+  const lastAt = lastPairAt.get(phoneNumber) || 0;
+  const pending = pendingByNumber.get(phoneNumber);
+  const guard = Date.now() - lastAt < 90000 || (pending && pending.sock);
+  if (guard && Date.now() - lastAt < 90000) {
+    const wait = Math.ceil((90000 - (Date.now() - lastAt)) / 1000);
+    throw new Error(
+      `Is number ke liye pehle se ek code zinda hai — dobara mat dabayein! ${wait}s baad code purana ho jayega, tab naya maang sakte hain.`
+    );
+  }
+  lastPairAt.set(phoneNumber, Date.now());
   const BACKOFF_MS = [5000, 15000];
   const MAX_ATTEMPTS = 2;
   for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
