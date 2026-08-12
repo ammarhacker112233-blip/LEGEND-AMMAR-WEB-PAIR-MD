@@ -43,6 +43,34 @@ function plog(...args) {
 const credsByNumber = (global.__credsByNumber =
   global.__credsByNumber || new Map());
 
+// Boot-time persistence: deploy/restart ke baad bhi captured sessions
+// zinda rahen. MultiFileAuthState ne .pair-auth/creds.json me save kiya
+// hota hai — us ko number-keyed Map me wapas load kar lo.
+function rehydrateStoredCreds() {
+  const credsFile = path.join(AUTH_DIR, "creds.json");
+  try {
+    if (!fs.existsSync(credsFile)) return;
+    const raw = JSON.parse(fs.readFileSync(credsFile, "utf8"));
+    // creds.me.id = "93770909827:XX@s.whatsapp.net" — number nikalo.
+    const me = raw?.me?.id;
+    const num = me ? String(me).split(":")[0] : null;
+    const phone = num && /^\d{10,15}$/.test(num) ? num : null;
+    if (phone) {
+      credsByNumber.set(phone, { creds: raw, restored: true });
+      plog("✅ Stored session restored from disk for", phone);
+    } else {
+      // Number anjaan hai — phir bhi pehle available number par rakho taake
+      // bot us ko utha sake; /session khali id par bhi serve karta hai.
+      const any = credsByNumber.keys().next().value;
+      credsByNumber.set(any || "_any", { creds: raw, restored: true });
+      plog("⚠️ Stored session restored (number unknown), serving on any id");
+    }
+  } catch (e) {
+    plog("⚠️ Could not rehydrate stored creds:", e?.message || e);
+  }
+}
+rehydrateStoredCreds();
+
 // ---------- Live pairing sockets: number → {sock, until, timer} ----------
 const pendingByNumber = (global.__pendingByNumber =
   global.__pendingByNumber || new Map());
@@ -137,6 +165,17 @@ function attemptPairing(phoneNumber, attempt = 0) {
         // attempt starts with a clean identity — stale creds are a known
         // trigger for 405/loggedOut on WhatsApp's side.
         try {
+          // Stored session ka backup pehle le lo — naya attempt purani
+          // session ko nahi bhoolna chahiye (session complete hone se pehle
+          // koi nayi pairing ka attempt aaye to backup se restore hoga).
+          const credsFile = path.join(AUTH_DIR, "creds.json");
+          if (fs.existsSync(credsFile)) {
+            fs.mkdirSync(path.join(__dirname, ".pair-auth-backup"), { recursive: true });
+            fs.copyFileSync(
+              credsFile,
+              path.join(__dirname, ".pair-auth-backup", "creds.json")
+            );
+          }
           fs.rmSync(AUTH_DIR, { recursive: true, force: true });
           fs.mkdirSync(AUTH_DIR, { recursive: true });
         } catch {
@@ -361,7 +400,15 @@ app.get("/api/pair/status", (req, res) => {
 app.get(["/session", "/session.json", "/api/session"], (req, res) => {
   const raw = String(req.query?.id || req.query?.phone || "").trim();
   const id = raw.endsWith(".json") ? raw.slice(0, -5) : raw;
-  const creds = id ? credsByNumber.get(id) : null;
+  let creds = id ? credsByNumber.get(id) : null;
+  // Fallback: exact number match na mile to jo bhi stored session ho de do —
+  // bot apne number ki session hi expect karta hai aur restore hamesha ek hi
+  // number ki hoti hai.
+  if (!creds && credsByNumber.size) {
+    for (const [k, v] of credsByNumber) {
+      if (k.startsWith("_") && v?.creds?.me) { creds = v; break; }
+    }
+  }
   res.json({
     status: !!creds,
     data: creds
