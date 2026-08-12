@@ -358,19 +358,59 @@ function attemptPairing(phoneNumber, attempt = 0) {
   });
 }
 
+// ---------- Circuit breaker: repeated failures = IP rate window active ----------
+// Har fail hone wala attempt WhatsApp ke 405/428 window ko REFRESH kar deta
+// hai. Is liye jaldi retry karne se block LAMBA hota jaata hai. Rule:
+//  2nd fail hone par is IP par 5 MINUTE ka sakht cooldown (koi attempt nahi),
+//  jisse window khud expire ho sake. Server restart ya deploy se counter reset.
+const FAIL_STAMPS = [];
+const COOLDOWN_MS = 5 * 60 * 1000;
+function isCoolingDown() {
+  const now = Date.now();
+  // sirf pichle COOLDOWN_MS me hone wale 2 fails count karo
+  const recent = FAIL_STAMPS.filter((t) => now - t < COOLDOWN_MS);
+  if (recent.length >= 2) {
+    const oldest = recent[0];
+    const remaining = COOLDOWN_MS - (now - oldest);
+    plog(
+      `IP cooldown active: WhatsApp rate window abhi zinda hai — ${Math.ceil(
+        remaining / 60000
+      )} min baad dobara try karein.`
+    );
+    return remaining;
+  }
+  return 0;
+}
 async function requestPairCode(phoneNumber) {
+  const remaining = isCoolingDown();
+  if (remaining > 0) {
+    throw new Error(
+      `WhatsApp is waqt is server ke IP ko mana kar raha hai. ${Math.ceil(
+        remaining / 60000
+      )} minute ruk kar dobara try karein — jaldi-jaldi dabane se block aur lamba ho jaata hai.`
+    );
+  }
   // Per-attempt backoff: rapid reconnects on the same IP trigger WhatsApp
-  // 429/405 rate limits that persist 15-40 min — space attempts out.
-  const BACKOFF_MS = [3000, 10000];
-  const MAX_ATTEMPTS = 3;
+  // 429/405 rate limits — space attempts out (longer = safer).
+  const BACKOFF_MS = [5000, 15000];
+  const MAX_ATTEMPTS = 2;
   for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
     const result = await attemptPairing(phoneNumber, i);
     if (result.valid) return result.code;
+    FAIL_STAMPS.push(Date.now());
     if (i < MAX_ATTEMPTS - 1) {
-      const waitMs = BACKOFF_MS[i] || 10000;
+      const waitMs = BACKOFF_MS[i] || 15000;
       plog(`Attempt ${i + 1} failed, waiting ${waitMs / 1000}s before retry...`);
       await new Promise((r) => setTimeout(r, waitMs));
     }
+  }
+  const next = isCoolingDown();
+  if (next > 0) {
+    throw new Error(
+      `WhatsApp server is server ke IP ko abhi mana kar raha hai (datacenter block — temporary). ${Math.ceil(
+        next / 60000
+      )} minute ruk kar dobara try karein — jaldi-jaldi dabane se block aur lamba ho jaata hai.`
+    );
   }
   throw new Error(
     "WhatsApp server se connect nahi ho saka, kuch der baad dobara try karein."
