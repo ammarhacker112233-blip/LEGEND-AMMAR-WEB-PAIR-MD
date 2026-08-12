@@ -351,7 +351,16 @@ app.get(["/session", "/session.json", "/api/session"], (req, res) => {
   const creds = id ? credsByNumber.get(id) : null;
   res.json({
     status: !!creds,
-    data: creds ? { sessionId: JSON.stringify(creds.creds) } : null,
+    data: creds
+      ? {
+          // Canonical JAWAD-family format: base64 of creds.json so that any
+          // fork (Khan/KhanXmd/Jawad) can load it with its own auth decoder.
+          sessionId:
+            "LEGEND-AMMAR:~" +
+            Buffer.from(JSON.stringify(creds.creds)).toString("base64"),
+          credsJson: JSON.stringify(creds.creds),
+        }
+      : null,
     error: creds ? null : "No session yet. Pehle pairing code se pair karein.",
   });
 });
