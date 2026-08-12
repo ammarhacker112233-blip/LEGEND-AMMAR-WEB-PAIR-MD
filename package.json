@@ -8,9 +8,10 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "pm2 start ecosystem.config.js",
+    "start": "bash start.sh",
     "stop": "pm2 stop LEGEND-AMMAR",
-    "restart": "pm2 restart LEGEND-AMMAR"
+    "restart": "pm2 restart LEGEND-AMMAR",
+    "pair": "node pair.js"
   },
   "keywords": [
     "LEGEND-AMMAR",

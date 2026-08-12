@@ -16,7 +16,10 @@ const {
   useMultiFileAuthState,
 } = require("@whiskeysockets/baileys");
 
-const PORT = Number(process.env.PAIR_PORT || process.env.PORT || 8000);
+// Railway assigns the single public PORT to the container. pair.js MUST bind it
+// (the bot's own websocket does not use the HTTP port), otherwise Railway's
+// proxy returns 502.
+const PORT = Number(process.env.PORT || process.env.PAIR_PORT || 8000);
 const AUTH_DIR = path.join(__dirname, ".pair-auth");
 
 // ---------- Logger (terminal + pair.log) ----------

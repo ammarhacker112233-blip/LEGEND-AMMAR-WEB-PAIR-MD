@@ -18,11 +18,8 @@ module.exports = {
       min_uptime: "5s",
       instances: 1,
       exec_mode: "fork",
-      env: {
-        // Railway exposes a single PORT for the service; pairing page runs on it
-        // alongside the bot via pm2 process separation (bot uses its own WS port).
-        PORT: "8000",
-      },
+      // Do NOT set PORT here — Railway injects its own PORT for the service;
+      // pair.js binds to process.env.PORT so Railway's proxy finds it.
     },
   ],
 };
