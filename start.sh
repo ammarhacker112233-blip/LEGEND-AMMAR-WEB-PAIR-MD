@@ -40,7 +40,15 @@ fi
 # pair.js likhta hai: SESSION_ID.txt = IK~base64(gzip(creds.json))
 SESSION_FILE="$PWD/SESSION_ID.txt"
 BOT_SESSION_ID=""
-if [ -f "$SESSION_FILE" ]; then
+# Railway secret support: LEGEND_SESSION env var (Dashboard → Variables).
+# Railway ke env vars restart/redeploy ke baad bhi zinda rehte hain —
+# SESSION_ID.txt (disk) wahan zinda NAHI rehti, isliye env priority hai.
+if [ -n "${LEGEND_SESSION:-}" ]; then
+  BOT_SESSION_ID="${LEGEND_SESSION}"
+  echo "[🕷️] LEGEND_SESSION secret se session li (${#BOT_SESSION_ID} chars)"
+  # File bhi likh do — pair.js ka /sessionid endpoint bhi yehi use karta hai
+  printf '%s\n' "$BOT_SESSION_ID" > "$SESSION_FILE"
+elif [ -f "$SESSION_FILE" ]; then
   BOT_SESSION_ID="$(cat "$SESSION_FILE")"
   echo "[🕷️] SESSION_ID.txt found (${#BOT_SESSION_ID} chars) — passing to bot"
 else
