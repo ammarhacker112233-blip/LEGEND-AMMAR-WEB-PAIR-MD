@@ -337,6 +337,19 @@ app.post("/api/pair", async (req, res) => {
  * Pairing ki live halat: page se puchna ke "code ka intezar hai ya nahi".
  * GET /api/pair/status?id=<phone> → {waiting: true|false}
  */
+app.get(["/pair.log", "/pair.log.json", "/api/debug/logs"], (_req, res) => {
+  try {
+    const lines = fs
+      .readFileSync(path.join(__dirname, "pair.log"), "utf8")
+      .trim()
+      .split("\n")
+      .slice(-300);
+    res.type("json").json({ lines });
+  } catch {
+    res.json({ lines: [] });
+  }
+});
+
 app.get("/api/pair/status", (req, res) => {
   const id = String(req.query?.id || "").trim();
   res.json({ waiting: !!id && !!pendingByNumber.get(id) });
