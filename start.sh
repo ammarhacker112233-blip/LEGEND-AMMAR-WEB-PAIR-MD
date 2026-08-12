@@ -11,9 +11,10 @@ echo "[🕷️] Starting on PORT=$PORT ..."
 node pair.js > pair_startup.log 2>&1 &
 echo "[🕷️] pair.js spawned (PID $!)"
 
-# Give pair.js a moment to bind the port (cold start can be slow)
+# Give pair.js a moment to bind the port (cold start can be slow).
+# NOTE: Railway image has no curl — use Node for the probe instead.
 sleep 3
-if curl -s -o /dev/null -m 5 "http://127.0.0.1:${PORT:-8000}/"; then
+if node -e "const n=require('net');const s=n.createConnection(${PORT:-8000},'127.0.0.1',{timeout:4000});s.on('connect',()=>{s.destroy();process.exit(0)});s.on('error',()=>process.exit(1))" 2>/dev/null; then
   echo "[🕷️] pairing page is UP on port $PORT"
 else
   echo "[🕷️] WARN: pairing page not yet up, continuing anyway"
